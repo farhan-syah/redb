@@ -466,7 +466,7 @@ pub trait ReadableTable<K: Key + 'static, V: Value + 'static>: ReadableTableMeta
     ///
     /// let read_txn = db.begin_read()?;
     /// let table = read_txn.open_table(TABLE)?;
-    /// let mut iter = table.range("a".."c")?;
+    /// let mut iter = ReadableTable::range(&table, "a".."c")?;
     /// let (key, value) = iter.next().unwrap()?;
     /// assert_eq!("a", key.value());
     /// assert_eq!(0, value.value());
@@ -567,8 +567,17 @@ impl<K: Key + 'static, V: Value + 'static> ReadOnlyTable<K, V> {
         })
     }
 
-    /// This method is like [`ReadableTable::get()`], but the [`AccessGuard`] is reference counted
-    /// and keeps the transaction alive until it is dropped.
+    /// This method is like [`ReadableTable::get()`], but the guard is `'static`
+    ///
+    /// Note: contrary to what was previously documented, the returned guard does not keep the
+    /// transaction alive. If the guard outlives the [`crate::ReadTransaction`], concurrent
+    /// writers may reclaim the pages it references, which panics in debug builds. Use
+    /// [`ReadableTable::get()`] instead, or [`Self::get_owned()`] if the guard needs to keep the
+    /// transaction alive.
+    #[deprecated(
+        since = "4.2.0",
+        note = "the returned guard does not keep the transaction alive, and can crash debug builds if it outlives the transaction; use ReadableTable::get(), or get_owned() if the guard needs to keep the transaction alive"
+    )]
     pub fn get<'a>(
         &self,
         key: impl Borrow<K::SelfType<'a>>,
@@ -583,12 +592,23 @@ impl<K: Key + 'static, V: Value + 'static> ReadOnlyTable<K, V> {
         key: impl Borrow<K::SelfType<'a>>,
     ) -> Result<Option<OwnedAccessGuard<V>>> {
         Ok(self
-            .get(key)?
+            .tree
+            .get(key.borrow())?
             .map(|x| OwnedAccessGuard::new(x, self.transaction_guard.clone())))
     }
 
-    /// This method is like [`ReadableTable::range()`], but the iterator is reference counted and keeps the transaction
-    /// alive until it is dropped.
+    /// This method is like [`ReadableTable::range()`], but the iterator is `'static`
+    ///
+    /// Note: contrary to what was previously documented, neither the returned iterator nor the
+    /// guards it yields keep the transaction alive. If they outlive the
+    /// [`crate::ReadTransaction`], concurrent writers may reclaim the pages they reference,
+    /// which panics in debug builds. Use [`ReadableTable::range()`] instead, or
+    /// [`Self::range_owned()`] if the iterator and its guards need to keep the transaction
+    /// alive.
+    #[deprecated(
+        since = "4.2.0",
+        note = "the iterator and its guards do not keep the transaction alive, and can crash debug builds if they outlive the transaction; use ReadableTable::range(), or range_owned() if the iterator and its guards need to keep the transaction alive"
+    )]
     pub fn range<'a, KR>(&self, range: impl RangeBounds<KR>) -> Result<Range<'static, K, V>>
     where
         KR: Borrow<K::SelfType<'a>>,
@@ -605,10 +625,12 @@ impl<K: Key + 'static, V: Value + 'static> ReadOnlyTable<K, V> {
     where
         KR: Borrow<K::SelfType<'a>>,
     {
-        Ok(OwnedRange::new(
-            self.range(range)?,
-            self.transaction_guard.clone(),
-        ))
+        self.tree.range(&range).map(|x| {
+            OwnedRange::new(
+                Range::new(x, self.transaction_guard.clone()),
+                self.transaction_guard.clone(),
+            )
+        })
     }
 }
 

@@ -398,7 +398,7 @@ pub trait ReadableDatabase {
 /// let txn = db.begin_read()?;
 /// {
 ///     let mut table = txn.open_table(TABLE)?;
-///     println!("{}", table.get(&0)?.unwrap().value());
+///     println!("{}", table.get_owned(&0)?.unwrap().value());
 /// }
 /// # Ok(())
 /// # }

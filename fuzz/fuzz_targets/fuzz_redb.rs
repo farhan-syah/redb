@@ -818,7 +818,7 @@ fn exec_table_crash_support<T: Clone + Debug>(
         let old_countdown = countdown.swap(u64::MAX, Ordering::SeqCst);
         let txn = db.begin_read().unwrap();
         let counter_table = txn.open_table(COUNTER_TABLE).unwrap();
-        let last_committed = counter_table.get(()).unwrap().unwrap().value();
+        let last_committed = counter_table.get_owned(()).unwrap().unwrap().value();
         // Need to make sure this transaction is completed. Otherwise, it could conflict with closing
         // and re-opening the database below
         drop(counter_table);

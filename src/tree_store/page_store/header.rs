@@ -1004,7 +1004,7 @@ mod test {
         {
             let txn = db.begin_read().unwrap();
             let table = txn.open_table(X).unwrap();
-            assert_eq!(table.get("k").unwrap().unwrap().value(), "v");
+            assert_eq!(table.get_owned("k").unwrap().unwrap().value(), "v");
         }
         // Deletes the allocator state table from the system tree, which asserts on a bad count
         drop(db);
@@ -1022,7 +1022,7 @@ mod test {
         assert_eq!(
             txn.open_table(X)
                 .unwrap()
-                .get("k")
+                .get_owned("k")
                 .unwrap()
                 .unwrap()
                 .value(),
