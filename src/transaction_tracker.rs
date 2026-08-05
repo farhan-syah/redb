@@ -7,7 +7,7 @@ use std::collections::btree_map::BTreeMap;
 use std::collections::{BTreeSet, HashMap};
 use std::mem;
 use std::mem::size_of;
-use std::sync::{Condvar, Mutex};
+use std::sync::{Arc, Condvar, Mutex};
 
 #[derive(Copy, Clone, Hash, Ord, PartialOrd, Eq, PartialEq, Debug)]
 pub(crate) struct TransactionId(u64);
@@ -91,6 +91,9 @@ struct State {
     pending_non_durable_commits: HashMap<TransactionId, TransactionId>,
     // Non-durable commits which have NOT been processed in the freed table
     unprocessed_freed_non_durable_commits: BTreeSet<TransactionId>,
+    // Set when the Database was dropped while a write transaction was live. That transaction
+    // keeps the database open, and performs the close when it ends. See end_write_transaction()
+    deferred_close: Option<Arc<TransactionalMemory>>,
 }
 
 pub(crate) struct TransactionTracker {
@@ -110,6 +113,7 @@ impl TransactionTracker {
                 persistent_savepoints: BTreeSet::default(),
                 pending_non_durable_commits: HashMap::default(),
                 unprocessed_freed_non_durable_commits: BTreeSet::default(),
+                deferred_close: None,
             }),
             live_write_transaction_available: Condvar::new(),
         }
@@ -129,11 +133,33 @@ impl TransactionTracker {
         transaction_id
     }
 
-    pub(crate) fn end_write_transaction(&self, id: TransactionId) {
+    // Returns the memory of a deferred close, which the caller must perform now that the write
+    // transaction has ended
+    pub(crate) fn end_write_transaction(
+        &self,
+        id: TransactionId,
+    ) -> Option<Arc<TransactionalMemory>> {
         let mut state = self.state.lock().unwrap();
         assert_eq!(state.live_write_transaction.unwrap(), id);
         state.live_write_transaction = None;
         self.live_write_transaction_available.notify_one();
+        state.deferred_close.take()
+    }
+
+    // Defers the database close to the end of the live write transaction, if one exists.
+    // Returns false if there is no live write transaction, in which case the caller must close
+    // the database itself
+    pub(crate) fn defer_close_if_write_transaction_live(
+        &self,
+        mem: &Arc<TransactionalMemory>,
+    ) -> bool {
+        let mut state = self.state.lock().unwrap();
+        if state.live_write_transaction.is_some() {
+            state.deferred_close = Some(mem.clone());
+            true
+        } else {
+            false
+        }
     }
 
     pub(crate) fn clear_pending_non_durable_commits(&self) {
