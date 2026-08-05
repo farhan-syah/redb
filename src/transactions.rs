@@ -1,3 +1,7 @@
+mod sorted_table;
+
+pub use sorted_table::{SortedTableBuilder, SortedTableOptions};
+
 use crate::db::TransactionGuard;
 use crate::error::CommitError;
 use crate::multimap_table::ReadOnlyUntypedMultimapTable;

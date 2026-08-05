@@ -79,7 +79,10 @@ pub use table::{
     ExtractIf, Range, ReadOnlyTable, ReadOnlyUntypedTable, ReadableTable, ReadableTableMetadata,
     Table, TableStats,
 };
-pub use transactions::{DatabaseStats, Durability, ReadTransaction, WriteTransaction};
+pub use transactions::{
+    DatabaseStats, Durability, ReadTransaction, SortedTableBuilder, SortedTableOptions,
+    WriteTransaction,
+};
 pub use tree_store::{AccessGuard, AccessGuardMut, AccessGuardMutInPlace, Savepoint};
 pub use types::{Key, MutInPlaceValue, TypeName, Value};
 

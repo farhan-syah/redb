@@ -322,11 +322,11 @@ impl UntypedBtreeMut {
 }
 
 pub(crate) struct BtreeMut<'a, K: Key + 'static, V: Value + 'static> {
-    mem: Arc<TransactionalMemory>,
+    pub(super) mem: Arc<TransactionalMemory>,
     transaction_guard: Arc<TransactionGuard>,
     root: Option<BtreeHeader>,
     freed_pages: Arc<Mutex<Vec<PageNumber>>>,
-    allocated_pages: Arc<Mutex<PageTrackerPolicy>>,
+    pub(super) allocated_pages: Arc<Mutex<PageTrackerPolicy>>,
     _key_type: PhantomData<K>,
     _value_type: PhantomData<V>,
     _lifetime: PhantomData<&'a ()>,

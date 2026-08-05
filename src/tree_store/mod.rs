@@ -1,5 +1,6 @@
 mod btree;
 mod btree_base;
+mod btree_bulk;
 mod btree_iters;
 mod btree_mutator;
 mod page_store;
@@ -14,6 +15,7 @@ pub(crate) use btree_base::{
     BRANCH, BranchAccessor, BranchMutator, BtreeHeader, Checksum, DEFERRED, LEAF, LeafAccessor,
     LeafMutator, RawLeafBuilder,
 };
+pub(crate) use btree_bulk::BtreeBulkBuilder;
 pub(crate) use btree_iters::{AllPageNumbersBtreeIter, BtreeExtractIf, BtreeRangeIter};
 pub(crate) use page_store::ReadOnlyBackend;
 pub(crate) use page_store::{

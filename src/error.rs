@@ -550,6 +550,12 @@ pub enum Error {
     TableDoesNotExist(String),
     /// Table name already exists in the database
     TableExists(String),
+    /// A bottom-up sorted build targeted a table that already contained data.
+    SortedTableNotEmpty(String),
+    /// Keys supplied to a sorted table build were not strictly increasing.
+    SortedTableKeyOrder,
+    /// An insert error from a sorted table builder was ignored by its producer.
+    SortedTableBuilderFailed,
     // Tables cannot be opened for writing multiple times, since they could retrieve immutable &
     // mutable references to the same dirty pages, or multiple mutable references via insert_reserve()
     TableAlreadyOpen(String, &'static panic::Location<'static>),
@@ -685,6 +691,18 @@ impl Display for Error {
             }
             Error::ReadTransactionStillInUse(_) => {
                 write!(f, "Transaction still in use")
+            }
+            Error::SortedTableNotEmpty(table) => {
+                write!(f, "Sorted table build requires an empty table: {table}")
+            }
+            Error::SortedTableKeyOrder => {
+                write!(f, "Sorted table build keys must be strictly increasing")
+            }
+            Error::SortedTableBuilderFailed => {
+                write!(
+                    f,
+                    "Sorted table builder was left failed by an ignored insert error"
+                )
             }
         }
     }
